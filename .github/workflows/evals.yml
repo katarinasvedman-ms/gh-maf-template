@@ -1,0 +1,36 @@
+name: evals
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  run-evals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore and build
+        run: |
+          dotnet restore gh-maf-template.sln
+          dotnet build gh-maf-template.sln --configuration Release --no-restore
+
+      - name: Run host evaluation
+        run: dotnet run --project src/Template.Host/Template.Host.csproj --configuration Release --no-build
+
+      - name: Validate evaluation artifacts
+        run: |
+          test -f artifacts/evaluation-report.json
+          test -f artifacts/evaluation-library-report.json
+
+      - name: Upload evaluation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-artifacts
+          path: artifacts/*.json

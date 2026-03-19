@@ -1,0 +1,120 @@
+name: pr-checks
+
+on:
+  pull_request:
+
+jobs:
+  guidance-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure guidance files exist
+        run: |
+          test -f .github/copilot-instructions.md
+          test -f .github/pull_request_template.md
+          test -f .github/instructions/csharp.instructions.md
+          test -f .github/instructions/tests.instructions.md
+          test -f .github/instructions/docs.instructions.md
+          test -f .github/instructions/security.instructions.md
+
+      - name: Ensure architecture docs exist
+        run: |
+          test -f docs/architecture/system-overview.md
+          test -f docs/architecture/coding-standards.md
+          test -f docs/architecture/decision-log.md
+          test -f docs/architecture/ai-engineering-guidelines.md
+
+      - name: Enforce changed-file policies
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          echo "Changed files:"
+          echo "$changed_files"
+
+          if [ -z "$changed_files" ]; then
+            echo "No changed files detected."
+            exit 0
+          fi
+
+          # Block edits to generated or runtime artifact files.
+          if echo "$changed_files" | grep -E '(^|/)(bin|obj)/' >/dev/null; then
+            echo "Detected changes under bin/ or obj/. Generated outputs must not be committed."
+            exit 1
+          fi
+
+          if echo "$changed_files" | grep -E '^artifacts/evaluation-.*\.json$' >/dev/null; then
+            echo "Detected committed evaluation runtime artifacts under artifacts/."
+            exit 1
+          fi
+
+          # Prevent reintroduction of removed guidance mechanisms.
+          if echo "$changed_files" | grep -E '^(\.github/agents/|agents/.*\.instructions\.md$)' >/dev/null; then
+            echo "Detected changes that reintroduce removed custom-agent or legacy guidance files."
+            exit 1
+          fi
+
+          # Identify change categories.
+          tools_changed=false
+          agents_changed=false
+          mcp_changed=false
+          host_changed=false
+          eval_changed=false
+          workflow_changed=false
+          scripts_changed=false
+
+          if echo "$changed_files" | grep -E '^src/Template\.Tools/' >/dev/null; then tools_changed=true; fi
+          if echo "$changed_files" | grep -E '^src/Template\.Agents/' >/dev/null; then agents_changed=true; fi
+          if echo "$changed_files" | grep -E '^src/Template\.Mcp/' >/dev/null; then mcp_changed=true; fi
+          if echo "$changed_files" | grep -E '^src/Template\.Host/' >/dev/null; then host_changed=true; fi
+          if echo "$changed_files" | grep -E '^src/Template\.Evaluation/' >/dev/null; then eval_changed=true; fi
+          if echo "$changed_files" | grep -E '^\.github/workflows/' >/dev/null; then workflow_changed=true; fi
+          if echo "$changed_files" | grep -E '^scripts/' >/dev/null; then scripts_changed=true; fi
+
+          # Core runtime surfaces require targeted tests in unit or integration suites.
+          if [ "$tools_changed" = true ] || [ "$mcp_changed" = true ] || [ "$host_changed" = true ]; then
+            if ! echo "$changed_files" | grep -E '^tests/Template\.(UnitTests|IntegrationTests)/' >/dev/null; then
+              echo "Core runtime surface changed without updates in Template.UnitTests or Template.IntegrationTests."
+              exit 1
+            fi
+          fi
+
+          # Architecture-boundary surfaces require architecture docs updates.
+          boundary_changed=false
+          if [ "$tools_changed" = true ] || [ "$agents_changed" = true ] || [ "$mcp_changed" = true ] || [ "$host_changed" = true ] || [ "$eval_changed" = true ]; then
+            boundary_changed=true
+          fi
+
+          if [ "$boundary_changed" = true ]; then
+            if ! echo "$changed_files" | grep -E '^docs/architecture/(system-overview|coding-standards|decision-log)\.md$' >/dev/null; then
+              echo "Boundary/runtime surfaces changed without architecture doc updates."
+              exit 1
+            fi
+          fi
+
+          # Workflow or setup script changes must update setup/usage-facing docs.
+          if [ "$workflow_changed" = true ] || [ "$scripts_changed" = true ]; then
+            if ! echo "$changed_files" | grep -E '^(SETUP\.md|README\.md|USAGE\.md|docs/)' >/dev/null; then
+              echo "Workflow/scripts changed without corresponding docs/setup updates."
+              exit 1
+            fi
+          fi
+
+          # Runtime changes still require tests.
+          runtime_changed=false
+          if echo "$changed_files" | grep -E '^src/' >/dev/null; then runtime_changed=true; fi
+          if [ "$runtime_changed" = true ]; then
+            if ! echo "$changed_files" | grep -E '^tests/' >/dev/null; then
+              echo "Runtime code changed without test updates."
+              exit 1
+            fi
+          fi
+
+          echo "Changed-file policies passed."

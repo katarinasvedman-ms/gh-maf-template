@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --configuration Release --no-build
+
+      - name: Run host evaluation smoke
+        run: dotnet run --project src/Template.Host/Template.Host.csproj --configuration Release --no-build
+
+      - name: Validate evaluation artifact
+        run: test -f artifacts/evaluation-report.json
+
+      - name: Enforce runtime architecture contract
+        shell: pwsh
+        run: ./scripts/validate_runtime_contract.ps1
+
+      - name: Enforce evaluation thresholds
+        shell: pwsh
+        run: |
+          $report = Get-Content -Path 'artifacts/evaluation-report.json' -Raw -Encoding UTF8 | ConvertFrom-Json
+
+          $passRate = [double]$report.PassRate
+          $reliabilityScore = [double]$report.ReliabilityScore
+          $safetyViolations = [int]$report.SafetyViolationCount
+
+          if ($passRate -lt 0.75) {
+            throw "PassRate too low: $passRate"
+          }
+
+          if ($reliabilityScore -lt 0.70) {
+            throw "ReliabilityScore too low: $reliabilityScore"
+          }
+
+          if ($safetyViolations -gt 0) {
+            throw "Safety violations detected: $safetyViolations"
+          }
+
+          Write-Host 'Evaluation thresholds passed.'

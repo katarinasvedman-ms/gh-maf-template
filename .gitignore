@@ -4,8 +4,6 @@
 ## developing with Visual Studio, the VS .gitignore
 ## https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 ## has more thorough IDE-specific entries.
-##
-## Get latest from https://github.com/github/gitignore/blob/main/Dotnet.gitignore
 
 # Build results
 [Dd]ebug/
@@ -22,24 +20,43 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+out/
 
 # .NET Core
 project.lock.json
 project.fragment.lock.json
 artifacts/
 
+# User and IDE
+.vs/
+.vscode/*.log
+*.user
+*.suo
+
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
 
 # NuGet Packages
 *.nupkg
-# NuGet Symbol Packages
 *.snupkg
+packages/
+
+# Test and coverage
+TestResults/
+coverage/
+CodeCoverage/
+*.trx
+
+# Local secrets and env
+.env
+.env.*
+appsettings.Local.json
+appsettings.*.local.json
+*.local.json
 
 # Others
 ~$*
 *~
-CodeCoverage/
 
 # MSBuild Binary and Structured Log
 *.binlog
