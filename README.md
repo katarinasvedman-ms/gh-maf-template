@@ -1,19 +1,50 @@
-# gh-maf-template
+## gh-maf-template
 
-Reusable instructions-first GitHub template where repo-wide guidance and path-specific instructions are the primary product, with a C# reference runtime for policy, MCP, observability, and evaluation patterns.
+A structured engineering system for building agentic products—focused on control, evaluation, and observability, not just agent logic.
 
-## Template layers
-- Primary product: repo-wide guidance and path-specific instructions in `.github/` and `docs/architecture/`.
-- Reference implementation: C# runtime in `src/`, `tests/`, and `artifacts/`.
+It helps teams move from prompt-driven experiments to systems that can be tested, constrained, and improved over time.
 
-The template standardizes how repository engineering is governed first, with the runtime intentionally serving as a concrete example of those rules rather than the main product.
+---
 
-## What this template optimizes for
-- Agent Framework orchestration patterns with concrete runnable examples.
-- Multi-agent workflow design using concurrent orchestration.
-- Evaluation-first engineering with machine-readable artifacts for CI.
-- Production-aligned observability and deterministic local fallback behavior.
+## What it provides
 
+### Behavior layer
+Define agents, workflows, and scenarios.
+
+### Capability & control layer
+Expose tools safely with contracts, policies, and context-based filtering.
+
+### Evaluation layer
+Test behavior using datasets and scenario-based checks.
+
+### Observability layer
+Trace decisions, tool usage, and failures to understand what happened.
+
+### Governance layer
+Repo instructions and workflows that standardize how changes are made.
+
+---
+
+## Why it matters
+
+Agentic systems are not deterministic.  
+Without structure, they become hard to trust, test, and operate.
+
+This template adds the missing pieces:
+
+- controlled capabilities instead of open-ended tools  
+- measurable behavior instead of demos  
+- traceable execution instead of guesswork  
+
+---
+
+## What this is not
+
+- Not just an agent sample  
+- Not just a prompt or tool wrapper  
+- Not just a framework  
+
+It’s the system around the agent that makes it possible to ship.
 ## Solution layout
 - `src/Template.Host`: concurrent workflow sample (two translator agents) and artifact generation.
 - `src/Template.Agents`: agent contracts and worker role examples.
