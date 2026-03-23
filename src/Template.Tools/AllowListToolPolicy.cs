@@ -26,9 +26,9 @@ public sealed class AllowListToolPolicy : IToolPolicy
             return false;
         }
 
-        if (context.RiskLevel > contract.MaxRiskLevel)
+        if (context.EffectiveRiskLevel > contract.MaxRiskLevel)
         {
-            reason = $"Tool '{definition.Name}' is blocked for risk level '{context.RiskLevel}' (max allowed '{contract.MaxRiskLevel}').";
+            reason = $"Tool '{definition.Name}' is blocked for risk level '{context.EffectiveRiskLevel}' (max allowed '{contract.MaxRiskLevel}').";
             return false;
         }
 

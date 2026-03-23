@@ -5,6 +5,7 @@ This repository uses one guidance plane only:
 - Path-specific constraints in `.github/instructions/*.instructions.md`.
 
 No custom agent profiles are part of the supported model.
+Development-time agents (planner, implementer, reviewer, verifier) live under `.github/agents/` as Copilot instruction files, not runtime objects.
 
 ## Operating contract
 

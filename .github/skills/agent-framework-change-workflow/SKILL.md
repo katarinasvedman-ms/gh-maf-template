@@ -22,6 +22,12 @@ Users do not need to mention this workflow ID explicitly.
 - Bypassing `SafeToolExecutor`, `IToolPolicy`, or `IToolApprovalGate`.
 - Infrastructure deployment workflows.
 
+## Invocation context
+
+This skill is invoked by the Implementer agent during a development-agent-workflow
+run, or directly for straightforward runtime changes that do not require
+multi-agent orchestration.
+
 ## Required inputs
 
 - The intended behavior change.

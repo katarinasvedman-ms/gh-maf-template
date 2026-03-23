@@ -55,9 +55,10 @@ jobs:
             exit 1
           fi
 
-          # Prevent reintroduction of removed guidance mechanisms.
-          if echo "$changed_files" | grep -E '^(\.github/agents/|agents/.*\.instructions\.md$)' >/dev/null; then
-            echo "Detected changes that reintroduce removed custom-agent or legacy guidance files."
+          # Prevent reintroduction of removed legacy guidance mechanisms.
+          # .github/agents/ is the supported location for development-time agent definitions.
+          if echo "$changed_files" | grep -E '^agents/.*\.instructions\.md$' >/dev/null; then
+            echo "Detected changes that reintroduce legacy agent instruction files outside .github/agents/."
             exit 1
           fi
 
@@ -118,3 +119,44 @@ jobs:
           fi
 
           echo "Changed-file policies passed."
+
+      - name: Validate skill file references
+        shell: pwsh
+        run: |
+          $skills = Get-ChildItem .github/skills -Recurse -Filter "SKILL.md" -ErrorAction SilentlyContinue
+          $failed = $false
+          foreach ($skill in $skills) {
+            $content = Get-Content $skill.FullName -Raw
+            $refs = [regex]::Matches($content, 'src/[^\s`"]+|tests/[^\s`"]+|\.github/[^\s`"]+')
+            foreach ($ref in $refs) {
+              $path = $ref.Value.Trim('.')
+              if (-not (Test-Path $path)) {
+                Write-Warning "Broken reference in $($skill.FullName): $($ref.Value)"
+                $failed = $true
+              }
+            }
+          }
+          if ($failed) { exit 1 }
+
+      - name: Check escalation surface documentation
+        shell: pwsh
+        run: |
+          $escalationSurfaces = @(
+            "src/Template.Host/Program.cs",
+            "src/Template.Tools/ToolCommandParser.cs",
+            "src/Template.Tools/SafeToolExecutor.cs",
+            "src/Template.Evaluation/",
+            ".github/workflows/"
+          )
+          $changedFiles = git diff --name-only origin/main HEAD
+          $decisionsChanged = $changedFiles -match "DECISIONS.md"
+          $surfaceTouched = $escalationSurfaces | Where-Object {
+            $surface = $_
+            $changedFiles | Where-Object { $_ -like "*$surface*" }
+          }
+          if ($surfaceTouched -and -not $decisionsChanged) {
+            Write-Warning "Escalation-required surfaces were modified without updating DECISIONS.md:"
+            $surfaceTouched | ForEach-Object { Write-Warning "  - $_" }
+            Write-Warning "This is a warning, not a block. Update DECISIONS.md before merging."
+            # Does not exit 1 — advisory only
+          }

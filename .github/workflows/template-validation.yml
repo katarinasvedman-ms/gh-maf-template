@@ -62,8 +62,10 @@ jobs:
 
       - name: Validate removed guidance files stay absent
         run: |
-          if find .github/agents -type f 2>/dev/null | grep . >/dev/null; then
-            echo "Removed custom-agent files were reintroduced under .github/agents/."
+          # .github/agents/*.md files are first-class governance artifacts (DECISIONS.md item 13, ADR-010).
+          # Reject any non-.md files that would indicate runtime artifacts leaking into the guidance layer.
+          if find .github/agents -type f ! -name '*.md' 2>/dev/null | grep . >/dev/null; then
+            echo "Non-markdown files detected under .github/agents/. Only .md instruction files are permitted."
             exit 1
           fi
 

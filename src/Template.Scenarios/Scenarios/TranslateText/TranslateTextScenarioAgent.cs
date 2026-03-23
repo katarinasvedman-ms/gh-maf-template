@@ -32,6 +32,12 @@ public sealed class TranslateTextScenarioAgent : IAgent
 
     public string Name => "TranslateText";
 
+    public AgentContract Contract { get; } = new(
+        Purpose: "Translate input text into registered target languages using official translator lookup.",
+        Capabilities: ["Translate text to French", "Translate text to Spanish", "Look up official translator identity"],
+        OutOfScope: ["Admin tool invocation", "File modification", "Any non-translation task"],
+        RequiredTools: ["mcp.lookup_official_translator"]);
+
     public IReadOnlyList<TranslatorLookupResult> TranslatorToolCalls { get; private set; } = [];
 
     public AgentWorkflowContextResult? LatestWorkflowContext { get; private set; }

@@ -294,4 +294,161 @@ public sealed class SafeToolExecutorTests
             new ToolDefinition(toolName, "test", new[] { requiredArg }, sensitivity, TimeSpan.FromSeconds(1)),
             request => Task.FromResult(handler(request)));
     }
+
+    [Fact]
+    public void EffectiveRiskLevel_EscalatesAfterTwoConsecutiveFailures()
+    {
+        var priorCalls = new[]
+        {
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail1", 1, TimeSpan.Zero),
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail2", 1, TimeSpan.Zero)
+        };
+
+        var context = new ToolExecutionContext(ToolExecutionMode.Unspecified, "test", ToolRiskLevel.Elevated, PriorCallsInTurn: priorCalls);
+
+        Assert.Equal(ToolRiskLevel.High, context.EffectiveRiskLevel);
+    }
+
+    [Fact]
+    public void EffectiveRiskLevel_DoesNotEscalateWithFewerThanTwoFailures()
+    {
+        var priorCalls = new[]
+        {
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail1", 1, TimeSpan.Zero)
+        };
+
+        var context = new ToolExecutionContext(ToolExecutionMode.Unspecified, "test", ToolRiskLevel.Elevated, PriorCallsInTurn: priorCalls);
+
+        Assert.Equal(ToolRiskLevel.Elevated, context.EffectiveRiskLevel);
+    }
+
+    [Fact]
+    public void EffectiveRiskLevel_DoesNotExceedCritical()
+    {
+        var priorCalls = new[]
+        {
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail1", 1, TimeSpan.Zero),
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail2", 1, TimeSpan.Zero)
+        };
+
+        var context = new ToolExecutionContext(ToolExecutionMode.Unspecified, "test", ToolRiskLevel.Critical, PriorCallsInTurn: priorCalls);
+
+        Assert.Equal(ToolRiskLevel.Critical, context.EffectiveRiskLevel);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DeniesTool_WhenEffectiveRiskLevelExceedsContractMaxRiskLevel()
+    {
+        var registry = new InMemoryToolRegistry();
+        registry.Register(new LocalFunctionTool(
+            new ToolDefinition(
+                "test-tool", "test", new[] { "input" }, ToolSensitivity.Low, TimeSpan.FromSeconds(1),
+                Contract: new ToolContract(
+                    WhatItDoes: "Test.",
+                    UseWhen: ["Always."],
+                    DoNotUseWhen: ["Never."],
+                    InputDescriptions: new Dictionary<string, string> { ["input"] = "Input." },
+                    OutputDescription: "Output.",
+                    Constraints: ["None."],
+                    SideEffects: ["None."],
+                    AllowedModes: [ToolExecutionMode.Unspecified],
+                    MaxRiskLevel: ToolRiskLevel.Elevated)),
+            request => Task.FromResult(ToolCallResult.Ok(request.ToolName, "ok", 1, TimeSpan.Zero))));
+
+        var executor = new SafeToolExecutor(
+            registry,
+            new AllowListToolPolicy(new[] { "test-tool" }),
+            new AutoApproveGate(approveHighSensitivity: true));
+
+        // Base RiskLevel is Elevated (which equals MaxRiskLevel), but prior failures escalate it to High
+        var priorCalls = new[]
+        {
+            ToolCallResult.Failed("other", ToolErrorCode.ExecutionFailed, "fail1", 1, TimeSpan.Zero),
+            ToolCallResult.Failed("other", ToolErrorCode.ExecutionFailed, "fail2", 1, TimeSpan.Zero)
+        };
+
+        var request = new ToolCallRequest(
+            "corr", "test-tool",
+            new Dictionary<string, string> { ["input"] = "hello" },
+            DateTimeOffset.UtcNow,
+            Context: new ToolExecutionContext(ToolExecutionMode.Unspecified, "test", ToolRiskLevel.Elevated, PriorCallsInTurn: priorCalls));
+
+        var result = await executor.ExecuteAsync(request);
+
+        Assert.False(result.Success);
+        Assert.Equal(ToolErrorCode.DeniedByPolicy, result.Failure?.Code);
+    }
+
+    [Fact]
+    public void EffectiveRiskLevel_DoesNotEscalate_WhenFailuresAreNotConsecutiveAtEnd()
+    {
+        // [fail, success, fail] → only 1 trailing failure, no escalation
+        var priorCalls = new[]
+        {
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail1", 1, TimeSpan.Zero),
+            ToolCallResult.Ok("tool", "ok", 1, TimeSpan.Zero),
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail2", 1, TimeSpan.Zero)
+        };
+
+        var context = new ToolExecutionContext(ToolExecutionMode.Unspecified, "test", ToolRiskLevel.Elevated, PriorCallsInTurn: priorCalls);
+
+        Assert.Equal(ToolRiskLevel.Elevated, context.EffectiveRiskLevel);
+    }
+
+    [Fact]
+    public void EffectiveRiskLevel_Escalates_WhenTwoTrailingFailuresFollowSuccess()
+    {
+        // [fail, success, fail, fail] → 2 trailing failures, escalates
+        var priorCalls = new[]
+        {
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail1", 1, TimeSpan.Zero),
+            ToolCallResult.Ok("tool", "ok", 1, TimeSpan.Zero),
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail2", 1, TimeSpan.Zero),
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail3", 1, TimeSpan.Zero)
+        };
+
+        var context = new ToolExecutionContext(ToolExecutionMode.Unspecified, "test", ToolRiskLevel.Elevated, PriorCallsInTurn: priorCalls);
+
+        Assert.Equal(ToolRiskLevel.High, context.EffectiveRiskLevel);
+    }
+
+    [Fact]
+    public void EffectiveRiskLevel_Escalates_WhenSuccessFollowedByTwoFailures()
+    {
+        // [success, fail, fail] → 2 trailing failures, escalates
+        var priorCalls = new[]
+        {
+            ToolCallResult.Ok("tool", "ok", 1, TimeSpan.Zero),
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail1", 1, TimeSpan.Zero),
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail2", 1, TimeSpan.Zero)
+        };
+
+        var context = new ToolExecutionContext(ToolExecutionMode.Unspecified, "test", ToolRiskLevel.Elevated, PriorCallsInTurn: priorCalls);
+
+        Assert.Equal(ToolRiskLevel.High, context.EffectiveRiskLevel);
+    }
+
+    [Fact]
+    public void EffectiveRiskLevel_DoesNotEscalate_WhenTrailingCallIsSuccess()
+    {
+        // [fail, fail, success] → 0 trailing failures, no escalation
+        var priorCalls = new[]
+        {
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail1", 1, TimeSpan.Zero),
+            ToolCallResult.Failed("tool", ToolErrorCode.ExecutionFailed, "fail2", 1, TimeSpan.Zero),
+            ToolCallResult.Ok("tool", "ok", 1, TimeSpan.Zero)
+        };
+
+        var context = new ToolExecutionContext(ToolExecutionMode.Unspecified, "test", ToolRiskLevel.Elevated, PriorCallsInTurn: priorCalls);
+
+        Assert.Equal(ToolRiskLevel.Elevated, context.EffectiveRiskLevel);
+    }
+
+    [Fact]
+    public void EffectiveRiskLevel_DoesNotEscalate_WhenPriorCallsEmpty()
+    {
+        var context = new ToolExecutionContext(ToolExecutionMode.Unspecified, "test", ToolRiskLevel.Elevated, PriorCallsInTurn: Array.Empty<ToolCallResult>());
+
+        Assert.Equal(ToolRiskLevel.Elevated, context.EffectiveRiskLevel);
+    }
 }

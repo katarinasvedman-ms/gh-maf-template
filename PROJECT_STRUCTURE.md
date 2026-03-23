@@ -5,6 +5,7 @@
 - Guidance layer (single guidance plane):
 	- `.github/copilot-instructions.md`
 	- `.github/instructions/*`
+	- `.github/agents/*`
 	- `.github/skills/*`
 	- `.github/workflows/*`
 	- `.github/pull_request_template.md`

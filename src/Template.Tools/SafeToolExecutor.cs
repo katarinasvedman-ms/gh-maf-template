@@ -26,6 +26,12 @@ public sealed class SafeToolExecutor : IToolExecutor
         _retryPolicy = retryPolicy ?? RetryPolicy.Conservative;
     }
 
+    /// <summary>
+    /// Executes a tool call request through the policy, approval, validation, and retry pipeline.
+    /// The caller is responsible for building the updated <see cref="ToolExecutionContext"/> with
+    /// <see cref="ToolExecutionContext.PriorCallsInTurn"/> after each successful or failed execution.
+    /// SafeToolExecutor does not mutate context.
+    /// </summary>
     public async Task<ToolCallResult> ExecuteAsync(ToolCallRequest request, CancellationToken cancellationToken = default)
     {
         var started = Stopwatch.StartNew();

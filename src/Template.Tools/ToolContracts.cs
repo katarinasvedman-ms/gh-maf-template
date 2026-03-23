@@ -38,8 +38,30 @@ public sealed record ToolExecutionContext(
     ToolExecutionMode Mode,
     string Intent,
     ToolRiskLevel RiskLevel,
-    IReadOnlyDictionary<string, string>? Tags = null)
+    IReadOnlyDictionary<string, string>? Tags = null,
+    IReadOnlyList<ToolCallResult>? PriorCallsInTurn = null)
 {
+    public IReadOnlyList<ToolCallResult> EffectivePriorCalls => PriorCallsInTurn ?? [];
+
+    public ToolRiskLevel EffectiveRiskLevel
+    {
+        get
+        {
+            var consecutiveFailures = 0;
+            for (var i = EffectivePriorCalls.Count - 1; i >= 0; i--)
+            {
+                if (!EffectivePriorCalls[i].Success)
+                    consecutiveFailures++;
+                else
+                    break;
+            }
+
+            if (consecutiveFailures >= 2)
+                return (ToolRiskLevel)Math.Min((int)RiskLevel + 1, (int)ToolRiskLevel.Critical);
+            return RiskLevel;
+        }
+    }
+
     public static ToolExecutionContext Default { get; } = new(ToolExecutionMode.Unspecified, "unspecified", ToolRiskLevel.Low);
 }
 

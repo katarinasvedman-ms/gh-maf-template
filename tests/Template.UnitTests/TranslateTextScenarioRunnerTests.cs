@@ -67,6 +67,12 @@ public sealed class TranslateTextScenarioRunnerTests
 
         public string Name => "static-success";
 
+        public AgentContract Contract { get; } = new(
+            Purpose: "Static test agent.",
+            Capabilities: ["Return static response"],
+            OutOfScope: [],
+            RequiredTools: []);
+
         public Task<AgentTurnOutput> RunAsync(AgentTurnInput input, CancellationToken cancellationToken)
         {
             var output = new AgentTurnOutput(

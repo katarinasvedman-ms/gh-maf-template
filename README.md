@@ -58,6 +58,7 @@ It’s the system around the agent that makes it possible to ship.
 ## GitHub guidance layout
 - `.github/copilot-instructions.md`: repo-wide Copilot operating rules.
 - `.github/instructions/*`: path-specific coding, testing, docs, and security constraints.
+- `.github/agents/`: development-time Copilot instruction files for the Planner, Implementer, Reviewer and Verifier agents.
 - `.github/skills/*`: reusable workflow playbooks for recurring engineering tasks.
 - `.github/workflows/*`: CI, template checks, PR checks, and evaluation workflows.
 - `.github/pull_request_template.md`: PR validation checklist.
@@ -66,6 +67,7 @@ It’s the system around the agent that makes it possible to ship.
 - `.github/skills/agent-framework-change-workflow/SKILL.md`
 - `.github/skills/evaluation-workflow/SKILL.md`
 - `.github/skills/safe-runtime-modification/SKILL.md`
+- `.github/skills/development-agent-workflow/SKILL.md`: orchestrates the four development-time agents for structured change execution.
 
 Skills define repeatable execution flow; instructions remain the mandatory policy layer.
 
@@ -122,6 +124,12 @@ The host sample follows the official Agent Framework concurrent orchestration pa
 ## Runtime mode
 - Cloud mode: set `AZURE_OPENAI_ENDPOINT` (and optionally `AZURE_OPENAI_DEPLOYMENT_NAME`) to run the live concurrent workflow.
 - Local fallback mode: if no endpoint is set, host produces deterministic sample output so CI and local runs still succeed.
+
+## OpenTelemetry visibility
+- Host runtime bootstraps OpenTelemetry via `Template.Observability.OpenTelemetryRuntime.CreateDefault("Template.Host")`.
+- Console exporter is enabled by default; view emitted spans/metrics directly in terminal output while running the host.
+- Set `OTEL_CONSOLE_EXPORTER_ENABLED=false` to suppress console telemetry.
+- `artifacts/evaluation-report.json` also records an `Observability` summary section for runtime verification.
 
 ## Evaluation artifacts
 Host execution writes two artifacts:

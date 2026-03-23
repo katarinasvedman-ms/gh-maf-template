@@ -1,5 +1,6 @@
 ﻿using Template.Agents;
 using System.Text.Json;
+using Template.Evaluation;
 using Template.Scenarios.TranslateText;
 using Template.Observability;
 using Template.Tools;
@@ -9,10 +10,10 @@ var deploymentName = Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT
 var scenarioName = Environment.GetEnvironmentVariable("SCENARIO") ?? "TranslateText";
 var standaloneAgentRegistry = new StandaloneTranslationAgentRegistry();
 var datasetPath = TranslateTextScenarioRunner.GetDefaultDatasetPath();
+using var openTelemetryRuntime = OpenTelemetryRuntime.CreateDefault("Template.Host");
 
 var parser = new ToolCommandParser();
-var runtime = BuildSafeToolRuntime();
-using var runtimeObserverScope = runtime.Observer as IDisposable;
+var runtime = BuildSafeToolRuntime(openTelemetryRuntime.Observer);
 if (!string.Equals(scenarioName, "TranslateText", StringComparison.OrdinalIgnoreCase))
 {
     throw new InvalidOperationException($"Unsupported scenario '{scenarioName}'. Supported scenarios: TranslateText");
@@ -44,6 +45,14 @@ foreach (var entry in agentWorkflowContext.Workers)
 
 Directory.CreateDirectory("artifacts");
 
+var evaluationScenarios = await EvaluationDatasetLoader.LoadJsonlAsync(datasetPath, CancellationToken.None);
+var coverageReport = ContractCoverageValidator.Validate(runtime.Registry.List(), evaluationScenarios);
+
+if (coverageReport.HasGaps)
+{
+    Console.WriteLine("WARNING: Contract coverage gaps detected. See CoverageReport in artifacts/evaluation-report.json for details.");
+}
+
 var translatorToolCalls = scenarioAgent.TranslatorToolCalls;
 var toolCallsSucceeded = translatorToolCalls.Count > 0 && translatorToolCalls.All(call => call.ExecutionSuccess);
 var failedToolCalls = translatorToolCalls.Count(call => !call.ExecutionSuccess);
@@ -68,6 +77,13 @@ var evaluationSummary = new
         Observer = runtime.Observer.GetType().Name
     },
     Dataset = scenarioRunResult.Dataset,
+    CoverageReport = new
+    {
+        HasGaps = coverageReport.HasGaps,
+        UncoveredUseWhenConditions = coverageReport.UncoveredUseWhenConditions,
+        UncoveredDoNotUseWhenConditions = coverageReport.UncoveredDoNotUseWhenConditions,
+        UncoveredModes = coverageReport.UncoveredModes
+    },
     Categories = report.Categories,
     Scenarios = report.Scenarios
 };
@@ -77,7 +93,7 @@ await File.WriteAllTextAsync(
     JsonSerializer.Serialize(evaluationSummary, new JsonSerializerOptions { WriteIndented = true }),
     CancellationToken.None);
 
-static ToolRuntime BuildSafeToolRuntime()
+static ToolRuntime BuildSafeToolRuntime(OpenTelemetryRuntimeObserver observer)
 {
     var registry = new InMemoryToolRegistry();
     var shouldFailTransiently = true;
@@ -121,7 +137,6 @@ static ToolRuntime BuildSafeToolRuntime()
             return Task.FromResult(ToolCallResult.Ok(request.ToolName, output, 1, TimeSpan.Zero));
         }));
 
-    var observer = new OpenTelemetryRuntimeObserver();
     var policy = new AllowListToolPolicy(["mcp.lookup_official_translator"]);
     var executor = new SafeToolExecutor(
         registry,

@@ -27,3 +27,5 @@
 - Tool contracts must be structured and runtime-discoverable through `IToolRegistry.List()`.
 - No bypass of policy/approval gates.
 - Structured failures remain explicit and machine-readable.
+- `EffectiveRiskLevel` reflects execution history via `PriorCallsInTurn` — trailing consecutive failures (the unbroken run of failures at the end of the sequence) escalate the risk level used for policy checks. A success resets the count.
+- `IAgent` carries an `AgentContract` that mirrors `ToolContract`, enabling task adherence evaluation and Foundry signal interpretation.

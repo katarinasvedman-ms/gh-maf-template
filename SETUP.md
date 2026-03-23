@@ -66,6 +66,11 @@ dotnet run --project src/Template.Host/Template.Host.csproj
 dotnet test
 ```
 
+## PR check steps
+The `.github/workflows/pr-checks.yml` workflow includes two governance verification steps:
+- **Validate skill file references**: Checks all `SKILL.md` files under `.github/skills/` for broken path references to `src/`, `tests/`, or `.github/` files. Fails the check if any referenced path does not exist.
+- **Check escalation surface documentation**: Warns (advisory, non-blocking) when escalation-required surfaces (`Program.cs`, `ToolCommandParser.cs`, `SafeToolExecutor.cs`, `Template.Evaluation/`, `.github/workflows/`) are modified without a corresponding `DECISIONS.md` update.
+
 ## Extending beyond the sample
 1. Add more specialized agents by following the pattern in `src/Template.Host/Program.cs`.
 2. Switch from two translators to additional agents by expanding the concurrent workflow inputs.

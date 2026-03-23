@@ -45,6 +45,8 @@ public static class EvaluationDatasetLoader
 
             var category = ParseCategory(dto.Category);
 
+            var origin = ParseOrigin(dto.Origin);
+
             scenarios.Add(new EvaluationScenario(
                 Name: dto.Name,
                 Prompt: dto.Prompt,
@@ -54,7 +56,9 @@ public static class EvaluationDatasetLoader
                 ExpectedSuccess: dto.ExpectedSuccess,
                 ExpectedErrorCode: dto.ExpectedErrorCode,
                 ExpectApprovalRequired: dto.ExpectApprovalRequired,
-                MaxLatencyMs: dto.MaxLatencyMs));
+                MaxLatencyMs: dto.MaxLatencyMs,
+                Origin: origin,
+                LinkedContractRule: dto.LinkedContractRule));
         }
 
         return scenarios;
@@ -72,6 +76,18 @@ public static class EvaluationDatasetLoader
             : EvaluationScenarioCategory.Normal;
     }
 
+    private static ScenarioOrigin ParseOrigin(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return ScenarioOrigin.Manual;
+        }
+
+        return Enum.TryParse<ScenarioOrigin>(value, ignoreCase: true, out var origin)
+            ? origin
+            : ScenarioOrigin.Manual;
+    }
+
     private sealed record EvaluationScenarioJsonl(
         string Name,
         string Prompt,
@@ -81,5 +97,7 @@ public static class EvaluationDatasetLoader
         bool? ExpectedSuccess,
         string? ExpectedErrorCode,
         bool? ExpectApprovalRequired,
-        double? MaxLatencyMs);
+        double? MaxLatencyMs,
+        string? Origin = null,
+        string? LinkedContractRule = null);
 }

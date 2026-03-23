@@ -15,6 +15,13 @@ public enum EvaluationScenarioCategory
     Adversarial
 }
 
+public enum ScenarioOrigin
+{
+    Manual,
+    DerivedFromProductionTrace,
+    DerivedFromContractCondition
+}
+
 public sealed record EvaluationScenario(
     string Name,
     string Prompt,
@@ -24,7 +31,9 @@ public sealed record EvaluationScenario(
     bool? ExpectedSuccess = null,
     string? ExpectedErrorCode = null,
     bool? ExpectApprovalRequired = null,
-    double? MaxLatencyMs = null);
+    double? MaxLatencyMs = null,
+    ScenarioOrigin Origin = ScenarioOrigin.Manual,
+    string? LinkedContractRule = null);
 
 public sealed record ScenarioResult(
     string ScenarioName,

@@ -1,5 +1,13 @@
 # Usage
 
+## Guidance model for developers
+- Default operating mode is instructions-first.
+- Repo-wide policy lives in `.github/copilot-instructions.md`.
+- Path-specific constraints live in `.github/instructions/*.instructions.md`.
+- Reusable workflow playbooks live in `.github/skills/*`.
+- Skills help with repeatable implementation flow, but they do not replace mandatory instruction constraints.
+- Custom agent profiles are not part of the supported model in this template baseline. Development-time agents (Planner, Implementer, Reviewer, Verifier) are Copilot instruction files under `.github/agents/` — these are not custom agent profiles and are a supported part of the template.
+
 ## Concurrent workflow model
 - The host creates two translator agents (French and Spanish).
 - Before each agent is created, the host calls an MCP-style tool (`mcp.lookup_official_translator`) via `/tool ...` parsing and `SafeToolExecutor`.
@@ -19,6 +27,12 @@
 ## Runtime modes
 - Cloud mode: set `AZURE_OPENAI_ENDPOINT` (and optional `AZURE_OPENAI_DEPLOYMENT_NAME`) to execute against Azure OpenAI.
 - Local fallback mode: without endpoint, host returns deterministic sample translations to keep local/CI flows stable.
+
+## Observability output
+- Host runtime bootstraps OpenTelemetry through `Template.Observability.OpenTelemetryRuntime.CreateDefault("Template.Host")`.
+- By default, OpenTelemetry console exporter is enabled, so spans/metrics are emitted to standard output while the host runs.
+- Disable console export by setting `OTEL_CONSOLE_EXPORTER_ENABLED=false`.
+- `artifacts/evaluation-report.json` includes an `Observability` summary block (`Enabled` + observer type) for CI/runtime verification.
 
 ## Evaluation flow
 `Template.Host` runs the concurrent workflow sample and writes artifacts.
