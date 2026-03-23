@@ -43,7 +43,6 @@ public sealed class ContractCoverageValidatorTests
         Assert.False(report.HasGaps);
         Assert.Empty(report.UncoveredUseWhenConditions);
         Assert.Empty(report.UncoveredDoNotUseWhenConditions);
-        Assert.Empty(report.UncoveredModes);
     }
 
     [Fact]

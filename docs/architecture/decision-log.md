@@ -77,3 +77,8 @@
 - Date: 2026-03-23
 - Decision: (1) Removed evaluation-datasets/planner-scenarios.jsonl because the planner is a guidance-layer instruction file under .github/agents/, not a runtime IAgent — the evaluation layer is for runtime agents only. (2) Wired ContractCoverageValidator.Validate() into Program.cs so coverage gaps appear in artifacts/evaluation-report.json as an advisory CoverageReport section. (3) Updated README.md, PROJECT_STRUCTURE.md, and USAGE.md to reference .github/agents/ and the development-agent-workflow skill.
 - Rationale: The planner dataset referenced repo.read_file which is not a registered runtime tool and had no execution path through AgentScenarioEvaluator. ContractCoverageValidator was implemented and tested but never called, making coverage gaps invisible to CI. Documentation did not reflect the .github/agents/ layer added in ADR-010.
+## ADR-014: ContractCoverageValidator does not check mode coverage
+
+- Date: 2026-03-23
+- Decision: Removed `UncoveredModes` from `ContractCoverageReport` and the mode-check loop from `ContractCoverageValidator`. Mode coverage is not tracked via evaluation scenarios.
+- Rationale: The previous mode-check predicate (`Any(s => s.ExpectedTool == tool.Name)`) was silently wrong — it was a tool-name check, not a mode check. It marked all `AllowedModes` as covered whenever any scenario referenced the tool, regardless of execution mode. `EvaluationScenario` has no `ExpectedMode` field and cannot declare or control execution context mode, because mode is determined by the agent/host at runtime. Mode policy enforcement is a runtime concern owned by `AllowListToolPolicy`, not a scenario dataset concern.

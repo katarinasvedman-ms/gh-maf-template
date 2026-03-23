@@ -81,8 +81,7 @@ var evaluationSummary = new
     {
         HasGaps = coverageReport.HasGaps,
         UncoveredUseWhenConditions = coverageReport.UncoveredUseWhenConditions,
-        UncoveredDoNotUseWhenConditions = coverageReport.UncoveredDoNotUseWhenConditions,
-        UncoveredModes = coverageReport.UncoveredModes
+        UncoveredDoNotUseWhenConditions = coverageReport.UncoveredDoNotUseWhenConditions
     },
     Categories = report.Categories,
     Scenarios = report.Scenarios
