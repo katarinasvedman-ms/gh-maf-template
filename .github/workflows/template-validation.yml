@@ -41,6 +41,8 @@ jobs:
           test -f .github/instructions/docs.instructions.md
           test -f .github/instructions/security.instructions.md
           test -f .github/skills/agent-framework-change-workflow/SKILL.md
+          test -f .github/skills/agent-governance/SKILL.md
+          test -f .github/skills/development-agent-workflow/SKILL.md
           test -f .github/skills/evaluation-workflow/SKILL.md
           test -f .github/skills/safe-runtime-modification/SKILL.md
 

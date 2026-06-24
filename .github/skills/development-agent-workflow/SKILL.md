@@ -1,3 +1,8 @@
+---
+name: development-agent-workflow
+description: "Orchestrates the four development-time agents (planner, implementer, reviewer, verifier) for structured change execution."
+---
+
 # Development Agent Workflow
 
 Orchestrates the four development-time agents (planner, implementer, reviewer, verifier) for structured change execution.

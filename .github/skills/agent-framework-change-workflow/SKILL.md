@@ -1,3 +1,8 @@
+---
+name: agent-framework-change-workflow
+description: "Implement or modify Agent Framework-backed runtime behavior safely, including host composition and tool routing interactions."
+---
+
 # Agent Framework Change Workflow
 
 Use this skill to implement or modify Agent Framework-backed runtime behavior safely.

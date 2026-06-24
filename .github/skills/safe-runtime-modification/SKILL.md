@@ -1,3 +1,8 @@
+---
+name: safe-runtime-modification
+description: "Apply high-risk runtime changes in parser and executor surfaces while preserving safety contracts and approval boundaries."
+---
+
 # Safe Runtime Modification
 
 Use this skill for high-risk runtime changes in parser and executor surfaces.
